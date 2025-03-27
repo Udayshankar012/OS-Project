@@ -1,0 +1,122 @@
+import random
+import time
+import os
+import pandas as pd
+import psutil
+import re
+import numpy as np
+from datetime import datetime
+from sklearn.ensemble import IsolationForest
+import hashlib
+import subprocess
+
+LOG_FILE = "attack_logs.csv"
+ALERT_LOG = "alert_logs.txt"
+processed_logs = set()
+
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+SIGNATURES = [
+    r"buffer overflow",
+    r"trapdoor",
+    r"cache poisoning"
+]
+
+MITIGATION_STEPS = {
+    "Buffer Overflow": [
+        "Applying Address Space Layout Randomization (ASLR)...",
+        "Enabling stack canaries...",
+        "Keeping software updated..."
+    ],
+    "Trapdoor": [
+        "Conducting security audits...",
+        "Scanning for hidden backdoors...",
+        "Enforcing secure development practices..."
+    ],
+    "Cache Poisoning": [
+        "Enabling DNSSEC...",
+        "Validating cached data...",
+        "Regularly purging cache..."
+    ]
+}
+
+def random_ip():
+    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+
+def random_app():
+    return random.choice([
+        "webserver", "database", "ssh", "ftp", "mailserver", "api_gateway", "file_server",
+        "dns_server", "proxy_server", "load_balancer", "vpn", "application_server"
+    ])
+
+def random_domain():
+    return random.choice([
+        "example.com", "malicious.com", "dns-server.net", "securebank.org",
+        "vpnprovider.org", "cloud-api.com", "socialmediaapp.com"
+    ])
+
+def simulate_buffer_overflow(target_app):
+    overflow_size = random.randint(1024, 4096)
+    return {"attack_type": "Buffer Overflow", "target_app": target_app, "overflow_size": overflow_size}
+
+def simulate_trapdoor(vulnerable_service):
+    status = random.choice(["activated", "inactive", "detected", "patched"])
+    return {"attack_type": "Trapdoor", "vulnerable_service": vulnerable_service, "status": status}
+
+def simulate_cache_poisoning(domain):
+    poisoned_ip = random_ip()
+    return {"attack_type": "Cache Poisoning", "domain": domain, "poisoned_ip": poisoned_ip}
+
+def simulate_normal_activity():
+    return {"attack_type": "Normal", "process": random_app(), "status": "running"}
+
+def generate_attack_log():
+    if random.random() < 0.7:
+        data = simulate_normal_activity()
+    else:
+        attack = random.choice(ATTACKS)
+        if attack["type"] == "Buffer Overflow":
+            data = simulate_buffer_overflow(random_app())
+        elif attack["type"] == "Trapdoor":
+            data = simulate_trapdoor(random_app())
+        elif attack["type"] == "Cache Poisoning":
+            data = simulate_cache_poisoning(random_domain())
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = {
+        "timestamp": timestamp,
+        "attack_type": data["attack_type"],
+        "description": MITIGATION_STEPS.get(data["attack_type"], ["Normal System Activity"]),
+        "details": str(data)
+    }
+    return log_entry
+
+def save_logs_to_csv(logs, file_path=LOG_FILE):
+    df = pd.DataFrame(logs)
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode="a", header=False, index=False)
+
+def load_logs(log_file, max_rows=10):
+    if os.path.exists(log_file):
+        df = pd.read_csv(log_file)
+        return df.tail(max_rows)
+    return pd.DataFrame(columns=["attack_type", "details"])
+
+def get_log_hash(log_entry):
+    return hashlib.md5(log_entry.encode()).hexdigest()
+
+def save_alert(alert_message):
+    with open(ALERT_LOG, "a") as f:
+        f.write(f"{datetime.now()} - {alert_message}\n")
+
+def signature_based_detection(log_entry):
+    for signature in SIGNATURES:
+        if re.search(signature, log_entry, re.IGNORECASE):
+            return True, signature
+    return False, None
