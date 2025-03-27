@@ -1,0 +1,85 @@
+import psutil
+import time
+import os
+import pandas as pd
+from datetime import datetime
+import re
+import random
+from sklearn.ensemble import IsolationForest
+import numpy as np
+
+# Log file path
+LOG_FILE = "attack_logs.csv"
+ALERT_LOG = "alert_logs.txt"
+
+# Load attack signatures
+SIGNATURES = [
+    r"buffer overflow",
+    r"trapdoor activated",
+    r"cache poisoning"
+]
+
+# Define attack types
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+# Behavioral Analysis: Monitor CPU and memory usage
+def monitor_system_behavior():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return {"cpu_usage": cpu_usage, "memory_usage": memory_usage}
+
+# Signature-Based Detection
+def signature_based_detection(log_entry):
+    for signature in SIGNATURES:
+        if re.search(signature, log_entry, re.IGNORECASE):
+            return True, signature
+    return False, None
+
+# Heuristic Analysis using Isolation Forest
+def train_heuristic_model(data):
+    model = IsolationForest(n_estimators=100, contamination=0.01, random_state=42)
+    model.fit(data)
+    return model
+
+def detect_anomalies(model, sample):
+    anomaly_score = model.decision_function([sample])
+    return anomaly_score[0] < -0.1  # Threshold for anomaly detection
+
+# Save alerts to a log file with UTF-8 encoding
+def save_alert(alert_message):
+    with open(ALERT_LOG, "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now()} - {alert_message}\n")
+
+# Simulate random attacks (Buffer Overflow, Trapdoor, or Cache Poisoning)
+def simulate_attack():
+    attack_type = random.choice(ATTACKS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if attack_type["type"] == "Buffer Overflow":
+        log_entry = f"{timestamp} - buffer overflow detected in webserver process."
+    elif attack_type["type"] == "Trapdoor":
+        log_entry = f"{timestamp} - trapdoor activated in ssh service."
+    elif attack_type["type"] == "Cache Poisoning":
+        log_entry = f"{timestamp} - cache poisoning attempt on dns-server.net."
+    
+    return log_entry
+
+# Display running system processes
+def show_running_processes():
+    process_list = []
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+        try:
+            process_list.append(f"PID: {proc.info['pid']}, Name: {proc.info['name']}, "
+                                f"CPU: {proc.info['cpu_percent']}%, Memory: {proc.info['memory_percent']}%")
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+    
+    if process_list:
+        print("🔍 Normal system processes running:")
+        for process in process_list[:5]:  # Show only the top 5 processes
+            print(process)
+    else:
+        print("✅ No active processes found.")
