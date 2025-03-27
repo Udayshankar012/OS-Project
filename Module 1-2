@@ -1,0 +1,46 @@
+# Generate attack log
+def generate_attack_log():
+    attack = random.choice(ATTACKS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if attack["type"] == "Buffer Overflow":
+        data = simulate_buffer_overflow(random_app())
+    elif attack["type"] == "Trapdoor":
+        data = simulate_trapdoor(random_app())
+    elif attack["type"] == "Cache Poisoning":
+        data = simulate_cache_poisoning(random_domain())
+
+    log_entry = {
+        "timestamp": timestamp,
+        "attack_type": data["attack_type"],
+        "description": attack["description"],
+        "details": str(data)
+    }
+    return log_entry
+
+# Save logs to CSV
+def save_logs_to_csv(logs, file_path=LOG_FILE):
+    df = pd.DataFrame(logs)
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode="a", header=False, index=False)
+
+# Simulate multiple attacks
+def simulate_attacks(num_attacks):
+    logs = []
+    for i in range(num_attacks):
+        log_entry = generate_attack_log()
+        logs.append(log_entry)
+
+        # Print the attack details in a formatted manner
+        print(f"[{log_entry['timestamp']}] {log_entry['attack_type']} - {log_entry['description']}")
+        print(f"Details: {log_entry['details']}\n")
+
+        time.sleep(0.1)  # Simulate delay
+    save_logs_to_csv(logs)
+    print(f"{num_attacks} attack logs generated and saved to {LOG_FILE}")
+
+# Main Execution
+if __name__ == "__main__":
+    simulate_attacks(20)
