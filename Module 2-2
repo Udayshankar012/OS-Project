@@ -1,0 +1,36 @@
+# Main Detection Logic
+def real_time_detection():
+    feature_data = np.random.rand(10, 2)  # Random data for model training
+    model = train_heuristic_model(feature_data)
+
+    while True:
+        # Monitor system behavior
+        system_metrics = monitor_system_behavior()
+        print(f"✅ CPU: {system_metrics['cpu_usage']}%, Memory: {system_metrics['memory_usage']}%")
+
+        # Simulate attack 30% of the time, otherwise show normal processes
+        if random.random() < 0.3:  # 30% probability to simulate an attack
+            log_entry = simulate_attack()
+            matched, signature = signature_based_detection(log_entry)
+            
+            if matched:
+                alert_msg = f"🚨 Detected attack: {signature} - {log_entry}"
+                print(alert_msg)
+                save_alert(alert_msg)
+
+            # Heuristic-based anomaly detection
+            sample_features = np.random.rand(1, 2)[0]
+            if detect_anomalies(model, sample_features):
+                alert_msg = f"⚠️ Heuristic alert: Unusual system behavior detected related to {signature}"
+                print(alert_msg)
+                save_alert(alert_msg)
+
+        else:
+            # Show normal processes if no attack detected
+            show_running_processes()
+        
+        time.sleep(2)
+
+# Main Execution
+if __name__ == "__main__":
+    real_time_detection() 
