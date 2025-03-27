@@ -1,0 +1,67 @@
+import random
+import time
+import os
+import pandas as pd
+from datetime import datetime
+
+# Log file path
+LOG_FILE = "attack_logs.csv"
+
+# Define attack types
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+# Simulate buffer overflow
+def simulate_buffer_overflow(target_app):
+    overflow_size = random.randint(1024, 4096)
+    return {"attack_type": "Buffer Overflow", "target_app": target_app, "overflow_size": overflow_size}
+
+# Simulate trapdoor
+def simulate_trapdoor(vulnerable_service):
+    status = random.choice([
+        "activated", "inactive", "detected", "hidden", "patched", "exploited",
+        "escalating privileges", "awaiting activation", "partially disabled", "fully compromised"
+    ])
+    return {"attack_type": "Trapdoor", "vulnerable_service": vulnerable_service, "status": status}
+
+def random_trapdoor_service():
+    return random.choice([
+        "ssh", "ftp", "telnet", "webserver", "api_gateway", "mailserver",
+        "database", "proxy_server", "vpn", "load_balancer", "firewall",
+        "cms_backend", "dns_server", "authentication_service", "cloud_storage",
+        "container_orchestrator", "kubernetes_cluster", "docker_daemon",
+        "iot_device", "media_streaming_server", "application_server"
+    ])
+
+
+# Simulate cache poisoning
+def simulate_cache_poisoning(domain):
+    poisoned_ip = random_ip()
+    return {"attack_type": "Cache Poisoning", "domain": domain, "poisoned_ip": poisoned_ip}
+
+# Generate random IP address
+def random_ip():
+    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+
+# Generate random target app
+def random_app():
+    return random.choice([
+        "webserver", "database", "ssh", "ftp", "mailserver", "api_gateway", "file_server",
+        "dns_server", "proxy_server", "load_balancer", "vpn", "application_server",
+        "cloud_storage", "content_delivery_network", "apache",
+        "docker_container", "firewall", "iot_device", "media_server",
+    ])
+
+def random_domain():
+    return random.choice([
+        "example.com", "malicious.com", "dns-server.net", "securebank.org", "university.edu",
+        "govportal.gov", "healthcare.gov", "techblog.io", "corporate-site.com", "userforum.net",
+        "onlineshop.biz", "gamehub.xyz", "vpnprovider.org", "datacenter-hosting.com",
+        "email-service.net", "cloud-api.com", "iot-network.net", "socialmediaapp.com",
+        "newsportal.org", "legit-website.com", "phishing-site.io", "ads-network.net",
+        "malware-download.com", "crypto-wallet.org", "secure-login.net", "suspicious-domain.biz",
+        "cdn-network.net", "proxy-service.org", "vpn-access.com", "trustedsource.org"
+    ])
