@@ -1,0 +1,460 @@
+import psutil
+import time
+import pandas as pd
+from datetime import datetime
+import re
+import random
+from sklearn.ensemble import IsolationForest
+import numpy as np
+
+# Log file path
+LOG_FILE = "attack_logs.csv"
+ALERT_LOG = "alert_logs.txt"
+
+# Load attack signatures
+SIGNATURES = [
+    r"buffer overflow",
+    r"trapdoor activated",
+    r"cache poisoning"
+]
+
+# Define attack types
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+# Behavioral Analysis: Monitor CPU and memory usage
+def monitor_system_behavior():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return {"cpu_usage": cpu_usage, "memory_usage": memory_usage}
+
+# Signature-Based Detection
+def signature_based_detection(log_entry):
+    for signature in SIGNATURES:
+        if re.search(signature, log_entry, re.IGNORECASE):
+            return True, signature
+    return False, None
+
+# Heuristic Analysis using Isolation Forest
+def train_heuristic_model(data):
+    model = IsolationForest(n_estimators=100, contamination=0.01, random_state=42)
+    model.fit(data)
+    return model
+
+def detect_anomalies(model, sample):
+    anomaly_score = model.decision_function([sample])
+    return anomaly_score[0] < -0.1  # Threshold for anomaly detection
+
+# Save alerts to a log file with UTF-8 encoding
+def save_alert(alert_message):
+    with open(ALERT_LOG, "a", encoding="utf-8") as f:
+        f.write(f"{datetime.now()} - {alert_message}\n")
+
+# Simulate random attacks (Buffer Overflow, Trapdoor, or Cache Poisoning)
+def simulate_attack():
+    attack_type = random.choice(ATTACKS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if attack_type["type"] == "Buffer Overflow":
+        log_entry = f"{timestamp} - buffer overflow detected in webserver process."
+    elif attack_type["type"] == "Trapdoor":
+        log_entry = f"{timestamp} - trapdoor activated in ssh service."
+    elif attack_type["type"] == "Cache Poisoning":
+        log_entry = f"{timestamp} - cache poisoning attempt on dns-server.net."
+    
+    return log_entry
+
+# Display running system processes
+def show_running_processes():
+    process_list = []
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+        try:
+            process_list.append(f"PID: {proc.info['pid']}, Name: {proc.info['name']}, "
+                                f"CPU: {proc.info['cpu_percent']}%, Memory: {proc.info['memory_percent']}%")
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+    
+    if process_list:
+        print("🔍 Normal system processes running:")
+        for process in process_list[:5]:  # Show only the top 5 processes
+            print(process)
+    else:
+        print("✅ No active processes found.")
+
+# Main Detection Logic
+def real_time_detection():
+    feature_data = np.random.rand(10, 2)  # Random data for model training
+    model = train_heuristic_model(feature_data)
+
+    while True:
+        # Monitor system behavior
+        system_metrics = monitor_system_behavior()
+        print(f"✅ CPU: {system_metrics['cpu_usage']}%, Memory: {system_metrics['memory_usage']}%")
+
+        # Simulate attack 30% of the time, otherwise show normal processes
+        if random.random() < 0.3:  # 30% probability to simulate an attack
+            log_entry = simulate_attack()
+            matched, signature = signature_based_detection(log_entry)
+            
+            if matched:
+                alert_msg = f"🚨 Detected attack: {signature} - {log_entry}"
+                print(alert_msg)
+                save_alert(alert_msg)
+
+            # Heuristic-based anomaly detection
+            sample_features = np.random.rand(1, 2)[0]
+            if detect_anomalies(model, sample_features):
+                alert_msg = f"⚠️ Heuristic alert: Unusual system behavior detected related to {signature}"
+                print(alert_msg)
+                save_alert(alert_msg)
+
+        else:
+            # Show normal processes if no attack detected
+            show_running_processes()
+        
+        time.sleep(2)
+
+# Main Execution
+if __name__ == "__main__":
+    real_time_detection()
+
+import random
+import time
+import os
+import pandas as pd
+import psutil
+import re
+import numpy as np
+from datetime import datetime
+from sklearn.ensemble import IsolationForest
+import hashlib
+import subprocess
+
+LOG_FILE = "attack_logs.csv"
+ALERT_LOG = "alert_logs.txt"
+processed_logs = set()
+
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+SIGNATURES = [
+    r"buffer overflow",
+    r"trapdoor",
+    r"cache poisoning"
+]
+
+MITIGATION_STEPS = {
+    "Buffer Overflow": [
+        "Applying Address Space Layout Randomization (ASLR)...",
+        "Enabling stack canaries...",
+        "Keeping software updated..."
+    ],
+    "Trapdoor": [
+        "Conducting security audits...",
+        "Scanning for hidden backdoors...",
+        "Enforcing secure development practices..."
+    ],
+    "Cache Poisoning": [
+        "Enabling DNSSEC...",
+        "Validating cached data...",
+        "Regularly purging cache..."
+    ]
+}
+
+def random_ip():
+    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+
+def random_app():
+    return random.choice([
+        "webserver", "database", "ssh", "ftp", "mailserver", "api_gateway", "file_server",
+        "dns_server", "proxy_server", "load_balancer", "vpn", "application_server"
+    ])
+
+def random_domain():
+    return random.choice([
+        "example.com", "malicious.com", "dns-server.net", "securebank.org",
+        "vpnprovider.org", "cloud-api.com", "socialmediaapp.com"
+    ])
+
+def simulate_buffer_overflow(target_app):
+    overflow_size = random.randint(1024, 4096)
+    return {"attack_type": "Buffer Overflow", "target_app": target_app, "overflow_size": overflow_size}
+
+def simulate_trapdoor(vulnerable_service):
+    status = random.choice(["activated", "inactive", "detected", "patched"])
+    return {"attack_type": "Trapdoor", "vulnerable_service": vulnerable_service, "status": status}
+
+def simulate_cache_poisoning(domain):
+    poisoned_ip = random_ip()
+    return {"attack_type": "Cache Poisoning", "domain": domain, "poisoned_ip": poisoned_ip}
+
+def simulate_normal_activity():
+    return {"attack_type": "Normal", "process": random_app(), "status": "running"}
+
+def generate_attack_log():
+    if random.random() < 0.7:
+        data = simulate_normal_activity()
+    else:
+        attack = random.choice(ATTACKS)
+        if attack["type"] == "Buffer Overflow":
+            data = simulate_buffer_overflow(random_app())
+        elif attack["type"] == "Trapdoor":
+            data = simulate_trapdoor(random_app())
+        elif attack["type"] == "Cache Poisoning":
+            data = simulate_cache_poisoning(random_domain())
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = {
+        "timestamp": timestamp,
+        "attack_type": data["attack_type"],
+        "description": MITIGATION_STEPS.get(data["attack_type"], ["Normal System Activity"]),
+        "details": str(data)
+    }
+    return log_entry
+
+def save_logs_to_csv(logs, file_path=LOG_FILE):
+    df = pd.DataFrame(logs)
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode="a", header=False, index=False)
+
+def load_logs(log_file, max_rows=10):
+    if os.path.exists(log_file):
+        df = pd.read_csv(log_file)
+        return df.tail(max_rows)
+    return pd.DataFrame(columns=["attack_type", "details"])
+
+def get_log_hash(log_entry):
+    return hashlib.md5(log_entry.encode()).hexdigest()
+
+def save_alert(alert_message):
+    with open(ALERT_LOG, "a") as f:
+        f.write(f"{datetime.now()} - {alert_message}\n")
+
+def signature_based_detection(log_entry):
+    for signature in SIGNATURES:
+        if re.search(signature, log_entry, re.IGNORECASE):
+            return True, signature
+    return False, None
+
+def identify_and_mitigate(log_entry):
+    for attack in ATTACKS:
+        if attack["type"].lower() in log_entry.lower():
+            print(f"\n[!] Attack Initiated: {attack['type']} - {attack['description']}")
+            print("[-] Prevention Steps Initiated...")
+
+            for step in MITIGATION_STEPS[attack["type"]]:
+                print(f"    → {step}")
+                time.sleep(1)
+
+            if attack["type"] == "Buffer Overflow":
+                harden_system()
+
+            elif attack["type"] == "Trapdoor":
+                run_security_scan()
+
+            elif attack["type"] == "Cache Poisoning":
+                clear_dns_cache()
+
+            print("[+] Prevention Process Completed Successfully.\n")
+            return
+
+def harden_system():
+    print("[*] Applying system hardening techniques...")
+    subprocess.run(["reg", "add", "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Lsa", "/v", "RestrictAnonymous", "/t", "REG_DWORD", "/d", "1", "/f"], check=True)
+    subprocess.run(["reg", "add", "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "/v", "EnableLUA", "/t", "REG_DWORD", "/d", "1", "/f"], check=True)
+    print("[+] System Hardened Successfully.")
+
+def run_security_scan():
+    print("[*] Initiating system scan...")
+    result = subprocess.run(["sfc", "/scannow"], capture_output=True, text=True)
+    print(result.stdout)
+
+def clear_dns_cache():
+    print("[*] Flushing DNS cache...")
+    subprocess.run(["ipconfig", "/flushdns"], check=True)
+    print("[+] DNS Cache Cleared Successfully.")
+
+def monitor_system_behavior():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return {"cpu_usage": cpu_usage, "memory_usage": memory_usage}
+
+def train_heuristic_model(data):
+    model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+    model.fit(data)
+    return model
+
+def detect_anomalies(model, sample):
+    anomaly_score = model.decision_function([sample])
+    return anomaly_score[0] < -0.2
+
+def real_time_detection():
+    global processed_logs
+
+    feature_data = np.random.rand(100, 2)
+    model = train_heuristic_model(feature_data)
+
+    while True:
+        new_log_entry = generate_attack_log()
+        save_logs_to_csv([new_log_entry])
+
+        log_hash = get_log_hash(str(new_log_entry))
+
+        if log_hash in processed_logs:
+            continue
+
+        attack_logs = load_logs(LOG_FILE)
+        attack_detected = False
+
+        for _, row in attack_logs.iterrows():
+            log_entry = row["details"]
+            matched, signature = signature_based_detection(log_entry)
+
+            if matched:
+                alert_msg = f"[ALERT] Signature-based alert: Detected '{signature}' in attack details."
+                print(alert_msg)
+                save_alert(alert_msg)
+                identify_and_mitigate(log_entry)
+                processed_logs.add(log_hash)
+                attack_detected = True
+
+        sample_features = np.random.rand(1, 2)[0]
+        if detect_anomalies(model, sample_features) and not attack_detected:
+            alert_msg = "[ALERT] Heuristic-based alert: Unusual behavior detected."
+            print(alert_msg)
+            save_alert(alert_msg)
+            identify_and_mitigate(log_entry)
+            processed_logs.add(log_hash)
+
+        system_metrics = monitor_system_behavior()
+        print(f"[INFO] CPU: {system_metrics['cpu_usage']}%, Memory: {system_metrics['memory_usage']}%")
+        time.sleep(3)
+
+if __name__ == "__main__":
+    initial_logs = [generate_attack_log() for _ in range(10)]
+    save_logs_to_csv(initial_logs)
+    real_time_detection()
+
+import random
+import time
+import os
+import pandas as pd
+from datetime import datetime
+
+# Log file path
+LOG_FILE = "attack_logs.csv"
+
+# Define attack types
+ATTACKS = [
+    {"type": "Buffer Overflow", "description": "Memory overflow leading to control hijacking"},
+    {"type": "Trapdoor", "description": "Hidden malicious backdoor in system"},
+    {"type": "Cache Poisoning", "description": "Compromising DNS/HTTP cache"}
+]
+
+# Simulate buffer overflow
+def simulate_buffer_overflow(target_app):
+    overflow_size = random.randint(1024, 4096)
+    return {"attack_type": "Buffer Overflow", "target_app": target_app, "overflow_size": overflow_size}
+
+# Simulate trapdoor
+def simulate_trapdoor(vulnerable_service):
+    status = random.choice([
+        "activated", "inactive", "detected", "hidden", "patched", "exploited",
+        "escalating privileges", "awaiting activation", "partially disabled", "fully compromised"
+    ])
+    return {"attack_type": "Trapdoor", "vulnerable_service": vulnerable_service, "status": status}
+
+def random_trapdoor_service():
+    return random.choice([
+        "ssh", "ftp", "telnet", "webserver", "api_gateway", "mailserver",
+        "database", "proxy_server", "vpn", "load_balancer", "firewall",
+        "cms_backend", "dns_server", "authentication_service", "cloud_storage",
+        "container_orchestrator", "kubernetes_cluster", "docker_daemon",
+        "iot_device", "media_streaming_server", "application_server"
+    ])
+
+
+# Simulate cache poisoning
+def simulate_cache_poisoning(domain):
+    poisoned_ip = random_ip()
+    return {"attack_type": "Cache Poisoning", "domain": domain, "poisoned_ip": poisoned_ip}
+
+# Generate random IP address
+def random_ip():
+    return f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
+
+# Generate random target app
+def random_app():
+    return random.choice([
+        "webserver", "database", "ssh", "ftp", "mailserver", "api_gateway", "file_server",
+        "dns_server", "proxy_server", "load_balancer", "vpn", "application_server",
+        "cloud_storage", "content_delivery_network", "nginx", "apache", "tomcat",
+        "kubernetes_cluster", "docker_container", "firewall", "iot_device", "media_server",
+        "redis_cache", "mongodb", "mysql", "postgresql", "cassandra", "elasticsearch"
+    ])
+
+def random_domain():
+    return random.choice([
+        "example.com", "malicious.com", "dns-server.net", "securebank.org", "university.edu",
+        "govportal.gov", "healthcare.gov", "techblog.io", "corporate-site.com", "userforum.net",
+        "onlineshop.biz", "gamehub.xyz", "vpnprovider.org", "datacenter-hosting.com",
+        "email-service.net", "cloud-api.com", "iot-network.net", "socialmediaapp.com",
+        "newsportal.org", "legit-website.com", "phishing-site.io", "ads-network.net",
+        "malware-download.com", "crypto-wallet.org", "secure-login.net", "suspicious-domain.biz",
+        "cdn-network.net", "proxy-service.org", "vpn-access.com", "trustedsource.org"
+    ])
+
+
+# Generate attack log
+def generate_attack_log():
+    attack = random.choice(ATTACKS)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if attack["type"] == "Buffer Overflow":
+        data = simulate_buffer_overflow(random_app())
+    elif attack["type"] == "Trapdoor":
+        data = simulate_trapdoor(random_app())
+    elif attack["type"] == "Cache Poisoning":
+        data = simulate_cache_poisoning(random_domain())
+
+    log_entry = {
+        "timestamp": timestamp,
+        "attack_type": data["attack_type"],
+        "description": attack["description"],
+        "details": str(data)
+    }
+    return log_entry
+
+# Save logs to CSV
+def save_logs_to_csv(logs, file_path=LOG_FILE):
+    df = pd.DataFrame(logs)
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode="a", header=False, index=False)
+
+# Simulate multiple attacks
+def simulate_attacks(num_attacks):
+    logs = []
+    for i in range(num_attacks):
+        log_entry = generate_attack_log()
+        logs.append(log_entry)
+
+        # Print the attack details in a formatted manner
+        print(f"[{log_entry['timestamp']}] {log_entry['attack_type']} - {log_entry['description']}")
+        print(f"Details: {log_entry['details']}\n")
+
+        time.sleep(0.1)  # Simulate delay
+    save_logs_to_csv(logs)
+    print(f"{num_attacks} attack logs generated and saved to {LOG_FILE}")
+
+# Main Execution
+if __name__ == "__main__":
+    simulate_attacks(20)
