@@ -1,0 +1,98 @@
+def identify_and_mitigate(log_entry):
+    for attack in ATTACKS:
+        if attack["type"].lower() in log_entry.lower():
+            print(f"\n[!] Attack Initiated: {attack['type']} - {attack['description']}")
+            print("[-] Prevention Steps Initiated...")
+
+            for step in MITIGATION_STEPS[attack["type"]]:
+                print(f"    → {step}")
+                time.sleep(1)
+
+            if attack["type"] == "Buffer Overflow":
+                harden_system()
+
+            elif attack["type"] == "Trapdoor":
+                run_security_scan()
+
+            elif attack["type"] == "Cache Poisoning":
+                clear_dns_cache()
+
+            print("[+] Prevention Process Completed Successfully.\n")
+            return
+
+def harden_system():
+    print("[*] Applying system hardening techniques...")
+    subprocess.run(["reg", "add", "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Lsa", "/v", "RestrictAnonymous", "/t", "REG_DWORD", "/d", "1", "/f"], check=True)
+    subprocess.run(["reg", "add", "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "/v", "EnableLUA", "/t", "REG_DWORD", "/d", "1", "/f"], check=True)
+    print("[+] System Hardened Successfully.")
+
+def run_security_scan():
+    print("[*] Initiating system scan...")
+    result = subprocess.run(["sfc", "/scannow"], capture_output=True, text=True)
+    print(result.stdout)
+
+def clear_dns_cache():
+    print("[*] Flushing DNS cache...")
+    subprocess.run(["ipconfig", "/flushdns"], check=True)
+    print("[+] DNS Cache Cleared Successfully.")
+
+def monitor_system_behavior():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_usage = psutil.virtual_memory().percent
+    return {"cpu_usage": cpu_usage, "memory_usage": memory_usage}
+
+def train_heuristic_model(data):
+    model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
+    model.fit(data)
+    return model
+
+def detect_anomalies(model, sample):
+    anomaly_score = model.decision_function([sample])
+    return anomaly_score[0] < -0.2
+
+def real_time_detection():
+    global processed_logs
+
+    feature_data = np.random.rand(100, 2)
+    model = train_heuristic_model(feature_data)
+
+    while True:
+        new_log_entry = generate_attack_log()
+        save_logs_to_csv([new_log_entry])
+
+        log_hash = get_log_hash(str(new_log_entry))
+
+        if log_hash in processed_logs:
+            continue
+
+        attack_logs = load_logs(LOG_FILE)
+        attack_detected = False
+
+        for _, row in attack_logs.iterrows():
+            log_entry = row["details"]
+            matched, signature = signature_based_detection(log_entry)
+
+            if matched:
+                alert_msg = f"[ALERT] Signature-based alert: Detected '{signature}' in attack details."
+                print(alert_msg)
+                save_alert(alert_msg)
+                identify_and_mitigate(log_entry)
+                processed_logs.add(log_hash)
+                attack_detected = True
+
+        sample_features = np.random.rand(1, 2)[0]
+        if detect_anomalies(model, sample_features) and not attack_detected:
+            alert_msg = "[ALERT] Heuristic-based alert: Unusual behavior detected."
+            print(alert_msg)
+            save_alert(alert_msg)
+            identify_and_mitigate(log_entry)
+            processed_logs.add(log_hash)
+
+        system_metrics = monitor_system_behavior()
+        print(f"[INFO] CPU: {system_metrics['cpu_usage']}%, Memory: {system_metrics['memory_usage']}%")
+        time.sleep(3)
+
+if __name__ == "__main__":
+    initial_logs = [generate_attack_log() for _ in range(10)]
+    save_logs_to_csv(initial_logs)
+    real_time_detection()
